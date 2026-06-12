@@ -1,15 +1,340 @@
 <!doctype html>
-<html>
-  <head>
-    <title>Thanks you for using my bot!</title>
-  </head>
-  <body>
-    <p>Remember to suscribe to my channel!! 
-      Join our discord community!
-      https://discord.gg/54GKgcfwt5   //////
-      
-                                                          
-                Thx u so much for using the bot!
-				<img src="https://media.discordapp.net/attachments/883312605681315841/1057124817251336303/widget.png?style=banner3" alt="Discord Banner 3"/></p>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BrothersSMP — Bot Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #a3e635;
+      letter-spacing: 1px;
+    }
+
+    header p {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .card h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+      background: #ef4444;
+      box-shadow: 0 0 0 0 rgba(239,68,68,0.4);
+      animation: pulse-red 2s infinite;
+    }
+
+    .status-dot.online {
+      background: #a3e635;
+      box-shadow: 0 0 0 0 rgba(163,230,53,0.4);
+      animation: pulse-green 2s infinite;
+    }
+
+    @keyframes pulse-green {
+      0%   { box-shadow: 0 0 0 0 rgba(163,230,53,0.5); }
+      70%  { box-shadow: 0 0 0 8px rgba(163,230,53,0); }
+      100% { box-shadow: 0 0 0 0 rgba(163,230,53,0); }
+    }
+
+    @keyframes pulse-red {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+
+    .status-label {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .status-label.online { color: #a3e635; }
+    .status-label.offline { color: #ef4444; }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #2d3148;
+      font-size: 0.9rem;
+    }
+
+    .stat-row:last-child { border-bottom: none; }
+
+    .stat-label { color: #64748b; }
+    .stat-value { font-weight: 600; color: #e2e8f0; }
+
+    .bar-wrap {
+      background: #2d3148;
+      border-radius: 999px;
+      height: 8px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+
+    .bar-health { background: #ef4444; }
+    .bar-food   { background: #f59e0b; }
+
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      margin-bottom: 2px;
+      color: #94a3b8;
+    }
+
+    .player-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .player-tag {
+      background: #2d3148;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      color: #a3e635;
+    }
+
+    .no-players {
+      color: #475569;
+      font-size: 0.85rem;
+    }
+
+    .attempts-badge {
+      background: #2d3148;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .server-address {
+      font-family: monospace;
+      font-size: 0.95rem;
+      color: #a3e635;
+      word-break: break-all;
+    }
+
+    footer {
+      margin-top: 32px;
+      color: #374151;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⛏ BrothersSMP Bot</h1>
+    <p>Auto-refreshes every 5 seconds</p>
+  </header>
+
+  <div class="grid">
+
+    <div class="card">
+      <h2>Connection Status</h2>
+      <div style="display:flex;align-items:center;margin-bottom:12px">
+        <span class="status-dot" id="dot"></span>
+        <span class="status-label" id="statusLabel">Checking...</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Server</span>
+        <span class="stat-value server-address" id="serverHost">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Port</span>
+        <span class="stat-value" id="serverPort">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Bot Username</span>
+        <span class="stat-value" id="botUsername">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Uptime</span>
+        <span class="stat-value" id="uptime">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Health &amp; Hunger</h2>
+      <div class="bar-label"><span>❤ Health</span><span id="healthVal">—</span></div>
+      <div class="bar-wrap"><div class="bar-fill bar-health" id="healthBar" style="width:0%"></div></div>
+      <br/>
+      <div class="bar-label"><span>🍗 Food</span><span id="foodVal">—</span></div>
+      <div class="bar-wrap"><div class="bar-fill bar-food" id="foodBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Position</h2>
+      <div class="stat-row">
+        <span class="stat-label">X</span>
+        <span class="stat-value" id="posX">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Y</span>
+        <span class="stat-value" id="posY">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Z</span>
+        <span class="stat-value" id="posZ">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Online Players</h2>
+      <div class="player-list" id="playerList">
+        <span class="no-players">Waiting for data...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Events</h2>
+      <div class="stat-row">
+        <span class="stat-label">Last Connected</span>
+        <span class="stat-value" id="lastConnected">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Last Disconnected</span>
+        <span class="stat-value" id="lastDisconnected">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Reconnect Attempts</span>
+        <span class="stat-value"><span class="attempts-badge" id="attempts">0</span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>BrothersSMP 24/7 AFK Bot &bull; Powered by Mineflayer</footer>
+
+  <script>
+    function fmt(ms) {
+      if (!ms) return '—';
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      const d = Math.floor(h / 24);
+      if (d > 0) return `${d}d ${h % 24}h ${m % 60}m`;
+      if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+      if (m > 0) return `${m}m ${s % 60}s`;
+      return `${s}s`;
+    }
+
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleTimeString();
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/status');
+        const d = await res.json();
+
+        const dot = document.getElementById('dot');
+        const label = document.getElementById('statusLabel');
+
+        if (d.connected) {
+          dot.className = 'status-dot online';
+          label.textContent = 'Online';
+          label.className = 'status-label online';
+        } else {
+          dot.className = 'status-dot';
+          label.textContent = 'Offline';
+          label.className = 'status-label offline';
+        }
+
+        document.getElementById('serverHost').textContent = d.host || '—';
+        document.getElementById('serverPort').textContent = d.port || '—';
+        document.getElementById('botUsername').textContent = d.username || '—';
+        document.getElementById('uptime').textContent = fmt(d.uptime);
+
+        const hp = d.health != null ? d.health : 0;
+        const food = d.food != null ? d.food : 0;
+        document.getElementById('healthVal').textContent = d.health != null ? `${hp}/20` : '—';
+        document.getElementById('foodVal').textContent = d.food != null ? `${food}/20` : '—';
+        document.getElementById('healthBar').style.width = `${(hp / 20) * 100}%`;
+        document.getElementById('foodBar').style.width = `${(food / 20) * 100}%`;
+
+        const pos = d.position;
+        document.getElementById('posX').textContent = pos ? pos.x : '—';
+        document.getElementById('posY').textContent = pos ? pos.y : '—';
+        document.getElementById('posZ').textContent = pos ? pos.z : '—';
+
+        const pl = document.getElementById('playerList');
+        if (d.players && d.players.length > 0) {
+          pl.innerHTML = d.players.map(p => `<span class="player-tag">${p}</span>`).join('');
+        } else {
+          pl.innerHTML = '<span class="no-players">No players online</span>';
+        }
+
+        document.getElementById('lastConnected').textContent = fmtTime(d.lastConnected);
+        document.getElementById('lastDisconnected').textContent = fmtTime(d.lastDisconnected);
+        document.getElementById('attempts').textContent = d.reconnectAttempts || 0;
+
+      } catch (e) {
+        document.getElementById('statusLabel').textContent = 'Error';
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+
+</body>
 </html>
