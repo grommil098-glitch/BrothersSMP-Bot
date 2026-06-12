@@ -1,5 +1,6 @@
 const express = require("express");
 const http = require("http");
+const https = require("https");
 const bp = require('bedrock-protocol');
 const app = express();
 
@@ -24,6 +25,7 @@ let botStatus = {
 
 app.use(express.json());
 app.get("/", (_, res) => res.sendFile(__dirname + "/index.html"));
+app.get("/ping", (_, res) => res.send("pong"));
 app.get("/status", (_, res) => {
   const uptimeMs = botStatus.connectTime ? Date.now() - botStatus.connectTime : null;
   res.json({ ...botStatus, uptime: uptimeMs });
@@ -32,7 +34,7 @@ app.listen(process.env.PORT || 5000);
 
 setInterval(() => {
   const domain = process.env.REPLIT_DEV_DOMAIN || process.env.PROJECT_DOMAIN + '.repl.co';
-  http.get(`https://${domain}/`).on('error', () => {});
+  https.get(`https://${domain}/ping`).on('error', () => {});
 }, 240000);
 
 function createBot() {
