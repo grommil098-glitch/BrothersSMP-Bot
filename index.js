@@ -50,8 +50,7 @@ function createBot () {
     version: false,
     username: 'BrothersSMPBot',
     port: SERVER_PORT,
-    plugins: [AutoAuth],
-    AutoAuth: 'bot112022'
+    auth: 'offline',
   });
 
   bot.loadPlugin(pvp)
