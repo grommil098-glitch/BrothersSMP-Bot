@@ -1,21 +1,17 @@
 const express = require("express");
 const http = require("http");
-const mineflayer = require('mineflayer')
-const pvp = require('mineflayer-pvp').plugin
-const { pathfinder, Movements, goals} = require('mineflayer-pathfinder')
-const armorManager = require('mineflayer-armor-manager')
-const mc = require('minecraft-protocol');
-const AutoAuth = require('mineflayer-auto-auth');
+const bp = require('bedrock-protocol');
 const app = express();
 
 const SERVER_HOST = 'BrothersSMP-Xbg2.aternos.me';
 const SERVER_PORT = 20715;
+const BOT_USERNAME = 'BrothersSMPBot';
 
 let botStatus = {
   connected: false,
   host: SERVER_HOST,
   port: SERVER_PORT,
-  username: '',
+  username: BOT_USERNAME,
   health: null,
   food: null,
   position: null,
@@ -23,20 +19,15 @@ let botStatus = {
   reconnectAttempts: 0,
   lastConnected: null,
   lastDisconnected: null,
-  uptime: null,
   connectTime: null,
 };
 
 app.use(express.json());
-
 app.get("/", (_, res) => res.sendFile(__dirname + "/index.html"));
-
 app.get("/status", (_, res) => {
-  const now = Date.now();
-  const uptimeMs = botStatus.connectTime ? now - botStatus.connectTime : null;
+  const uptimeMs = botStatus.connectTime ? Date.now() - botStatus.connectTime : null;
   res.json({ ...botStatus, uptime: uptimeMs });
 });
-
 app.listen(process.env.PORT || 5000);
 
 setInterval(() => {
@@ -44,132 +35,84 @@ setInterval(() => {
   http.get(`https://${domain}/`).on('error', () => {});
 }, 240000);
 
-function createBot () {
-  const bot = mineflayer.createBot({
-    host: SERVER_HOST,
-    version: false,
-    username: 'BrothersSMPBot',
-    port: SERVER_PORT,
-    auth: 'offline',
-  });
+function createBot() {
+  console.log(`Connecting to ${SERVER_HOST}:${SERVER_PORT}...`);
 
-  bot.loadPlugin(pvp)
-  bot.loadPlugin(armorManager)
-  bot.loadPlugin(pathfinder)
+  let client;
+  try {
+    client = bp.createClient({
+      host: SERVER_HOST,
+      port: SERVER_PORT,
+      username: BOT_USERNAME,
+      offline: true,
+      version: '1.26.20',
+      skipPing: true,
+    });
+  } catch (err) {
+    console.log('Failed to create client:', err.message);
+    botStatus.reconnectAttempts++;
+    setTimeout(createBot, 10000);
+    return;
+  }
 
-  bot.once('spawn', () => {
+  client.on('spawn', () => {
+    console.log(`Bot spawned as ${BOT_USERNAME}`);
     botStatus.connected = true;
-    botStatus.username = bot.username;
     botStatus.lastConnected = new Date().toISOString();
     botStatus.connectTime = Date.now();
-    console.log(`Bot connected as ${bot.username}`);
   });
 
-  bot.on('health', () => {
-    botStatus.health = bot.health;
-    botStatus.food = bot.food;
-  });
-
-  bot.on('move', () => {
-    if (bot.entity) {
-      botStatus.position = {
-        x: Math.round(bot.entity.position.x),
-        y: Math.round(bot.entity.position.y),
-        z: Math.round(bot.entity.position.z),
-      };
-    }
-  });
-
-  bot.on('playerJoined', () => {
-    botStatus.players = Object.keys(bot.players);
-  });
-
-  bot.on('playerLeft', () => {
-    botStatus.players = Object.keys(bot.players);
-  });
-
-  bot.on('playerCollect', (collector, itemDrop) => {
-    if (collector !== bot.entity) return
-    setTimeout(() => {
-      const sword = bot.inventory.items().find(item => item.name.includes('sword'))
-      if (sword) bot.equip(sword, 'hand')
-    }, 150)
-  })
-
-  bot.on('playerCollect', (collector, itemDrop) => {
-    if (collector !== bot.entity) return
-    setTimeout(() => {
-      const shield = bot.inventory.items().find(item => item.name.includes('shield'))
-      if (shield) bot.equip(shield, 'off-hand')
-    }, 250)
-  })
-
-  let guardPos = null
-
-  function guardArea (pos) {
-    guardPos = pos.clone()
-    if (!bot.pvp.target) moveToGuardPos()
-  }
-
-  function stopGuarding () {
-    guardPos = null
-    bot.pvp.stop()
-    bot.pathfinder.setGoal(null)
-  }
-
-  function moveToGuardPos () {
-    const mcData = require('minecraft-data')(bot.version)
-    bot.pathfinder.setMovements(new Movements(bot, mcData))
-    bot.pathfinder.setGoal(new goals.GoalBlock(guardPos.x, guardPos.y, guardPos.z))
-  }
-
-  bot.on('stoppedAttacking', () => {
-    if (guardPos) moveToGuardPos()
-  })
-
-  bot.on('physicTick', () => {
-    if (bot.pvp.target) return
-    if (bot.pathfinder.isMoving()) return
-    const entity = bot.nearestEntity()
-    if (entity) bot.lookAt(entity.position.offset(0, entity.height, 0))
-  })
-
-  bot.on('physicTick', () => {
-    if (!guardPos) return
-    const filter = e => e.type === 'mob' && e.position.distanceTo(bot.entity.position) < 16 &&
-                        e.mobType !== 'Armor Stand'
-    const entity = bot.nearestEntity(filter)
-    if (entity) bot.pvp.attack(entity)
-  })
-
-  bot.on('chat', (username, message) => {
-    if (message === 'guard') {
-      const player = bot.players[username]
-      if (!player) {
-        bot.chat('I will!')
-        guardArea(player.entity.position)
+  client.on('player_list', (packet) => {
+    try {
+      const records = packet.records;
+      if (records && records.records) {
+        botStatus.players = records.records.map(r => r.username).filter(Boolean);
       }
-    }
-    if (message === 'stop') {
-      bot.chat('I will stop!')
-      stopGuarding()
-    }
-  })
+    } catch (e) {}
+  });
 
-  bot.on('kicked', (reason) => {
-    console.log('Bot was kicked:', reason)
-    botStatus.connected = false;
-    botStatus.lastDisconnected = new Date().toISOString();
-    botStatus.connectTime = null;
-  })
+  client.on('update_attributes', (packet) => {
+    try {
+      if (packet.attributes) {
+        for (const attr of packet.attributes) {
+          if (attr.name === 'minecraft:health') botStatus.health = Math.round(attr.current);
+          if (attr.name === 'minecraft:player.hunger') botStatus.food = Math.round(attr.current);
+        }
+      }
+    } catch (e) {}
+  });
 
-  bot.on('error', (err) => {
-    console.log('Bot error:', err.message || err)
-    botStatus.connected = false;
-    botStatus.connectTime = null;
-  })
+  client.on('move_player', (packet) => {
+    try {
+      botStatus.position = {
+        x: Math.round(packet.x),
+        y: Math.round(packet.y),
+        z: Math.round(packet.z),
+      };
+    } catch (e) {}
+  });
 
-  bot.on('end', () => {
+  client.on('disconnect', (packet) => {
+    console.log('Disconnected:', packet.message || 'unknown reason');
+    resetAndReconnect();
+  });
+
+  client.on('kick', (packet) => {
+    console.log('Kicked:', packet.message || 'unknown reason');
+    resetAndReconnect();
+  });
+
+  client.on('error', (err) => {
+    console.log('Bot error:', err.message || err);
+    resetAndReconnect();
+  });
+
+  client.on('end', () => {
+    console.log('Connection ended');
+    resetAndReconnect();
+  });
+
+  function resetAndReconnect() {
     botStatus.connected = false;
     botStatus.health = null;
     botStatus.food = null;
@@ -178,9 +121,9 @@ function createBot () {
     botStatus.lastDisconnected = new Date().toISOString();
     botStatus.connectTime = null;
     botStatus.reconnectAttempts++;
-    console.log(`Bot disconnected. Reconnecting in 5 seconds... (attempt ${botStatus.reconnectAttempts})`);
+    console.log(`Reconnecting in 5 seconds... (attempt ${botStatus.reconnectAttempts})`);
     setTimeout(createBot, 5000);
-  })
+  }
 }
 
-createBot()
+createBot();
