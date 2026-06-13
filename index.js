@@ -35,7 +35,7 @@ app.listen(process.env.PORT || 5000);
 setInterval(() => {
   const domain = process.env.REPLIT_DEV_DOMAIN || process.env.PROJECT_DOMAIN + '.repl.co';
   https.get(`https://${domain}/ping`).on('error', () => {});
-}, 240000);
+}, 60000);
 
 function createBot() {
   console.log(`Connecting to ${SERVER_HOST}:${SERVER_PORT}...`);
