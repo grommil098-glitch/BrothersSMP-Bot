@@ -57,11 +57,48 @@ function createBot() {
     return;
   }
 
+  let currentPos = { x: 0, y: 64, z: 0, yaw: 0, pitch: 0 };
+  let antAfkInterval = null;
+
   client.on('spawn', () => {
     console.log(`Bot spawned as ${BOT_USERNAME}`);
     botStatus.connected = true;
     botStatus.lastConnected = new Date().toISOString();
     botStatus.connectTime = Date.now();
+
+    // Anti-AFK: every 30 seconds rotate and jump to avoid kick
+    antAfkInterval = setInterval(() => {
+      try {
+        // Rotate slightly so the bot looks active
+        currentPos.yaw = (currentPos.yaw + 45) % 360;
+
+        client.write('move_player', {
+          runtime_id: 1n,
+          position: { x: currentPos.x, y: currentPos.y, z: currentPos.z },
+          pitch: 0,
+          yaw: currentPos.yaw,
+          head_yaw: currentPos.yaw,
+          mode: 0,
+          on_ground: true,
+          ridden_runtime_id: 0n,
+          cause: { type: 0, actor_unique_id: 0n },
+          tick: 0n,
+        });
+
+        // Jump (start + stop jump action)
+        client.write('player_action', {
+          runtime_id: 1n,
+          action: 'jumping',
+          position: { x: Math.floor(currentPos.x), y: Math.floor(currentPos.y), z: Math.floor(currentPos.z) },
+          result_position: { x: Math.floor(currentPos.x), y: Math.floor(currentPos.y), z: Math.floor(currentPos.z) },
+          face: 0,
+        });
+
+        console.log('Anti-AFK action sent');
+      } catch (e) {
+        // Silently ignore if packet fails
+      }
+    }, 30000);
   });
 
   client.on('player_list', (packet) => {
@@ -86,10 +123,13 @@ function createBot() {
 
   client.on('move_player', (packet) => {
     try {
+      currentPos.x = packet.position.x;
+      currentPos.y = packet.position.y;
+      currentPos.z = packet.position.z;
       botStatus.position = {
-        x: Math.round(packet.x),
-        y: Math.round(packet.y),
-        z: Math.round(packet.z),
+        x: Math.round(packet.position.x),
+        y: Math.round(packet.position.y),
+        z: Math.round(packet.position.z),
       };
     } catch (e) {}
   });
@@ -115,6 +155,7 @@ function createBot() {
   });
 
   function resetAndReconnect() {
+    if (antAfkInterval) { clearInterval(antAfkInterval); antAfkInterval = null; }
     botStatus.connected = false;
     botStatus.health = null;
     botStatus.food = null;
