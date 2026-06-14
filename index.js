@@ -71,25 +71,19 @@ function createBot() {
       try {
         // Rotate slightly so the bot looks active
         currentPos.yaw = (currentPos.yaw + 45) % 360;
-
-        // Make the bot wobble back and forth slightly to trick Aternos' position tracker
-        const movementOffset = (Math.random() - 0.5) * 0.5; 
-        currentPos.x += movementOffset;
-        currentPos.z += movementOffset;
-
-        client.write('move_player', {
-          runtime_id: 1n,
-          position: { x: currentPos.x, y: currentPos.y, z: currentPos.z },
-          pitch: (Math.random() - 0.5) * 20,
-          yaw: (currentPos.yaw + 45) % 360,
-          head_yaw: (currentPos.yaw + 45) % 360,
-          mode: 0,
-          on_ground: true,
-          ridden_runtime_id: 0n,
-          cause: { type: 0, actor_unique_id: 0n },
-          tick: 0n
-        });
-
+        
+// Sends a chat message every 30 seconds to trick Aternos into staying online
+      const messages = ["Hello!", "Still here!", "Keeping the server alive!", "No sleeping!", "Beep boop!"];
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      
+      client.write('text', {
+        type: 'chat',
+        needs_translation: false,
+        source_name: client.username || 'Bot',
+        xuid: '',
+        platform_chat_id: '',
+        message: randomMessage
+      });
         // Jump (start + stop jump action)
         client.write('player_action', {
           runtime_id: 1n,
