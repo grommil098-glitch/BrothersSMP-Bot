@@ -72,17 +72,22 @@ function createBot() {
         // Rotate slightly so the bot looks active
         currentPos.yaw = (currentPos.yaw + 45) % 360;
 
+        // Make the bot wobble back and forth slightly to trick Aternos' position tracker
+        const movementOffset = (Math.random() - 0.5) * 0.5; 
+        currentPos.x += movementOffset;
+        currentPos.z += movementOffset;
+
         client.write('move_player', {
           runtime_id: 1n,
           position: { x: currentPos.x, y: currentPos.y, z: currentPos.z },
-          pitch: 0,
-          yaw: currentPos.yaw,
-          head_yaw: currentPos.yaw,
+          pitch: (Math.random() - 0.5) * 20,
+          yaw: (currentPos.yaw + 45) % 360,
+          head_yaw: (currentPos.yaw + 45) % 360,
           mode: 0,
           on_ground: true,
           ridden_runtime_id: 0n,
           cause: { type: 0, actor_unique_id: 0n },
-          tick: 0n,
+          tick: 0n
         });
 
         // Jump (start + stop jump action)
