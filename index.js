@@ -1,8 +1,11 @@
-const express = require("express");
-const http = require("http");
-const https = require("https");
 const bp = require('bedrock-protocol');
-const app = express();
+const http = require('http');
+
+// Fake web server to stop Render from making clones
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("Bot is alive!");
+}).listen(process.env.PORT || 3000);
 
 const SERVER_HOST = 'BrothersSMP-Xbg2.aternos.me';
 const SERVER_PORT = 20715;
